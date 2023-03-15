@@ -1,0 +1,21 @@
+{
+  "name": "a-hot-cup-of-JSX",
+  "version": "0.1.0",
+  "description": "Let's you code coffee script using _ like it was 2014 again",
+  "scripts": {
+    "test": "vitest --globals"
+  },
+  "license": "MIT",
+  "devDependencies": {
+    "babel-plugin-tester": "^11.0.4",
+    "jest": "^29.4.2",
+    "vite": "^4.1.1",
+    "vite-plugin-solid": "^2.5.0",
+    "vitest": "^0.28.4",
+    "@babel/core": "^7.20.12",
+    "coffeescript": "^2.7.0"
+  },
+  "dependencies": {
+    "solid-js": "^1.6.10"
+  }
+}

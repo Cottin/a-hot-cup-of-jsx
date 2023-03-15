@@ -1,0 +1,25 @@
+{
+  "name": "vite-template-solid",
+  "version": "0.0.0",
+  "description": "",
+  "scripts": {
+    "start": "vite",
+    "dev": "vite",
+    "build": "vite build",
+    "serve": "vite preview"
+  },
+  "license": "MIT",
+  "devDependencies": {
+    "vite": "^4.1.1",
+    "vite-plugin-solid": "^2.5.0"
+  },
+  "dependencies": {
+    "@babel/core": "^7.20.12",
+    "coffeescript": "^2.7.0",
+    "fela": "^12.2.1",
+    "fela-dom": "^12.2.1",
+    "fela-preset-web": "^12.2.1",
+    "solid-js": "^1.6.10",
+    "vite-plugin-coffee": "^2.2.1"
+  }
+}
