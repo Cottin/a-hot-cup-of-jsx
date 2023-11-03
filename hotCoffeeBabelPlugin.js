@@ -32,16 +32,21 @@ module.exports = ({ types: t }) => {
 
 					if (t.isAssignmentExpression(expression) &&
 						t.isIdentifier(expression.left) &&
-						t.isFunctionExpression(expression.right) &&
-						expression.left.name[0].toUpperCase() === expression.left.name[0]) {
+						expression.left.name[0].toUpperCase() === expression.left.name[0]){
 
-						path.replaceWith(t.variableDeclaration('var', [
-							t.variableDeclarator(expression.left, expression.right)
-						]))
-
+						const rightIsFunc = t.isFunctionExpression(expression.right) // App = function()
+						const rightIsWrappedFunc = t.isCallExpression(expression.right) && // App = memo(function() ...)
+																				t.isFunctionExpression(expression.right.arguments[0])
+					 	
+					 	if (rightIsFunc || rightIsWrappedFunc) {
+							path.replaceWith(t.variableDeclaration('var', [
+								t.variableDeclarator(expression.left, expression.right)
+							]))
+					 	}
 					}
 				}
 			},
+
 			// export default App = function() { ...   ->  	var App = function() { ...
 			// 																							export default App;jk
 			ExportDefaultDeclaration: {
@@ -50,16 +55,23 @@ module.exports = ({ types: t }) => {
 
 					if (t.isAssignmentExpression(declaration) &&
 						t.isIdentifier(declaration.left) &&
-						t.isFunctionExpression(declaration.right) &&
 						declaration.left.name[0].toUpperCase() === declaration.left.name[0]) {
 
-						path.replaceWithMultiple([
-							t.variableDeclaration('var', [t.variableDeclarator(declaration.left, declaration.right)]),
-							t.exportDefaultDeclaration(declaration.left)
-						])
+						const rightIsFunc = t.isFunctionExpression(declaration.right) // App = function()
+						const rightIsWrappedFunc = t.isCallExpression(declaration.right) && // App = memo(function() ...)
+																				t.isFunctionExpression(declaration.right.arguments[0])
+
+						if (rightIsFunc || rightIsWrappedFunc) {
+							path.replaceWithMultiple([
+								t.variableDeclaration('var', [t.variableDeclarator(declaration.left, declaration.right)]),
+								t.exportDefaultDeclaration(declaration.left)
+							])
+						}
 					}
 				}
 			},
+
+			// export App = function() is compiled to export var App = .. in CoffeeScript so no need to intervene
 		}
 	}
 }

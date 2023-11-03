@@ -22,6 +22,10 @@ pluginTester({
      output: `<MyComp>test</MyComp>;`,
     },
     {
+     code: `_('div', {p: 'ö'}, 'test')`,
+     output: `<div p="ö">test</div>;`,
+    },
+    {
      code: `_('input', {type: 'button', value: 'Click me'})`,
      output: `<input type="button" value="Click me" />;`,
     },
@@ -33,12 +37,32 @@ pluginTester({
      </div>;`,
     },
     {
+      code: `_({"data-month": 'time'});`,
+      output: `<div data-month="time" />;`
+    },
+    {
+      code: `_({[\`data-month-\${a}\`]: 'time'});`,
+      output: `<div
+  {...{
+    [\`data-month-\${a}\`]: "time",
+  }}
+/>;`
+    },
+    {
      code: `_({}, props.text)`,
      output: `<div>{props.text}</div>;`,
     },
     {
      code: `_('div', props, 'test')`,
      output: `<div {...props}>test</div>;`,
+    },
+    {
+     code: `_('div', {p: 'ö'}, 'test')`,
+     output: `<div p="ö">test</div>;`,
+    },
+    {
+     code: `_('div', props.member, 'test')`,
+     output: `<div {...props.member}>test</div>;`,
     },
     {
      code: `_('input', {type: 'button', value: 'Click me', ...rest})`,
@@ -51,6 +75,10 @@ pluginTester({
     {
      code: `_({class: className}, 't6')`,
      output: `<div class={className}>t6</div>;`,
+    },
+    {
+     code: `_(framer.motion, {class: className}, 't6')`,
+     output: `<framer.motion class={className}>t6</framer.motion>;`,
     },
     {
       code: `var MyComp = function() { return _({}, _({}, 'c1'), _({}, 'c2')); }`,
@@ -78,6 +106,14 @@ pluginTester({
           </div>
         );
       };`,
+    },
+    {
+      code: `var MyComp = React.forwardRef(function() { return _({s: 'p5'})});`,
+      output: `
+      var MyComp = React.forwardRef(function () {
+        const css = useFela();
+        return <div c="MyComp" s="p5" class={css("p5")} />;
+      });`,
     },
     {
      code: `_({s: s + "p4", class: base + "box"}, 't6')`,
@@ -132,6 +168,29 @@ pluginTester({
         );
       };`,
     },
+    // { Use method above for now
+    //   code: `_(React.Fragment, {}, _({}, 'a'), _({}, 'b'));`,
+    //   output: `
+    //       <>
+    //         <div>a</div>
+    //         <div>b</div>
+    //       </>
+    //   `
+    // // },
+
+    
+    {
+      code: `export var time = 1;`,
+      output: `export const time = 1;`,
+    },
+
+
+
+
+
+
+
+
 //     {
 //       code: `var a, k, v;
 // for (k in obj) {

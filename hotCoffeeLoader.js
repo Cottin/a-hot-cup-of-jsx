@@ -7,6 +7,8 @@ module.exports = function (src, inputSourceMap) {
     hotCoffeeBabelPlugin
   ], inputSourceMap})
 
+  // console.log('output.code', output.code);
+
   this.callback(null, output.code, output.map);
   
   return;

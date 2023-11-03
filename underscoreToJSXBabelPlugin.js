@@ -5,9 +5,23 @@ const propsToAttributes = (props) => {
 	if (t.isObjectExpression(props)) {
 		return props.properties.map((p) => {
 			if (t.isObjectProperty(p)) {
-				const key = t.jsxIdentifier(p.key.name)
+				let key = null
+				if (t.isIdentifier(p.key)) {
+					key = t.jsxIdentifier(p.key.name)
+				}
+				else if (t.isStringLiteral(p.key)) {
+					key = t.jsxIdentifier(p.key.value)
+				}
+				else if (t.isTemplateLiteral(p.key)) {
+					return t.jsxSpreadAttribute(t.objectExpression([p]))
+				}
+				else {
+					throw new Error('Not yet implemented 48')
+				}
+
 				if (t.isStringLiteral(p.value)) {
-					return t.jsxAttribute(key, t.stringLiteral(p.value.value))
+					// Note: don't wrap p.value.value in new t.stringLiteral, it turns ö into \xF6
+					return t.jsxAttribute(key, p.value)
 				}
 				else { // Default is just to wrap the expression in { .. }
 					return t.jsxAttribute(key, t.jsxExpressionContainer(p.value))
@@ -24,6 +38,7 @@ const propsToAttributes = (props) => {
 				return t.jsxSpreadAttribute(p.argument)
 			}
 			else {
+				console.log(p)
 				throw new Error('Not yet implemented 2')
 			}
 		})
@@ -31,10 +46,14 @@ const propsToAttributes = (props) => {
 	else if (t.isIdentifier(props)) {
 		return [t.jsxSpreadAttribute(props)]
 	}
+	else if (t.isMemberExpression(props)) {
+		return [t.jsxSpreadAttribute(props)]
+	}
 	else if (!props) {
 		return []
 	}
 	else {
+		console.log(props)
 		throw new Error('not yet implemented 3')
 	}
 }
@@ -53,15 +72,22 @@ const childrenToJSX = (children) => {
 	})
 }
 
+// Searches up the tree and returns
+// var MyComp = React.forwardRef(function() { return _({s: 'p5'})});    	=> [MyComp, function()]
+// var MyComp = function() { return _({s: 'p5'})};     										=> [MyComp, function()]
 const findComponentDeclaration = (path, idx = 0, breakEarly = true) => {
-	if (!path) return null
+	if (!path) return [null, null]
 	if (t.isFunctionExpression(path.node)) {
 		if (t.isVariableDeclarator(path.parentPath.node)) {
-			return path.parentPath
+			return [path.parentPath, path]
 		}
-		else if (breakEarly) return null
+		else if (t.isCallExpression(path.parentPath.node) &&
+			t.isVariableDeclarator(path.parentPath.parentPath.node)) {
+			return [path.parentPath.parentPath, path]
+		}
+		else if (breakEarly) return [null, null]
 	}
-	else if (idx > 20) return null
+	else if (idx > 20) return [null, null]
 	
 	return findComponentDeclaration(path.parentPath, idx + 1)
 }
@@ -102,6 +128,8 @@ module.exports = ({ types: t }) => {
 			// },
 			CallExpression: {
 				exit(path, state) {
+					const CLASS_ATTR = state.opts?.classAttr || 'class'
+
 					if (t.isIdentifier(path.node.callee) && path.node.callee.name === '_') {
 						let props, element, children = null
 						const arg0 = path.node.arguments[0]
@@ -136,7 +164,13 @@ module.exports = ({ types: t }) => {
 								throw new Error('_ to JSX: this expression is too ambigious: ' + path.hub.getCode())
 							}
 						}
+						else if (t.isMemberExpression(arg0)) {
+							props = path.node.arguments[1]
+							element = `${arg0.object.name}.${arg0.property.name}`
+							children = path.node.arguments.slice(2)
+						}
 						else {
+							console.log(arg0)
 							throw new Error('not yet implemented 5')
 						}
 
@@ -144,7 +178,7 @@ module.exports = ({ types: t }) => {
 
 						// Adding <div c="MyComp" ...
 						if (t.isReturnStatement(path.parent)) {
-							const compDeclaration = findComponentDeclaration(path)
+							const [compDeclaration, compDeclFunction] = findComponentDeclaration(path)
 							if (compDeclaration) {
 								const varName = compDeclaration.node.id.name
 								attributes.unshift(t.jsxAttribute(t.jsxIdentifier('c'), t.stringLiteral(varName)))
@@ -158,7 +192,7 @@ module.exports = ({ types: t }) => {
 						let sIdx, classIdx
 						for (const i in attributes) {
 							if (attributes[i].name?.name == 's') { sIdx = i }
-							else if (attributes[i].name?.name == 'class') { classIdx = i }
+							else if (attributes[i].name?.name == CLASS_ATTR) { classIdx = i }
 						}
 						if (sIdx !== undefined) {
 							let css
@@ -169,6 +203,7 @@ module.exports = ({ types: t }) => {
 								css = t.callExpression(t.identifier('css'), [attributes[sIdx].value])
 							}
 							else {
+								console.log(attributes[sIdx])
 								throw new Error("not yet implemented 142")
 							}
 
@@ -182,20 +217,21 @@ module.exports = ({ types: t }) => {
 										attributes[classIdx].value.expression)
 								}
 								else {
+									console.log(attributes[classIdx])
 									throw new Error("not yet implemented 130")
 								}
 							}
 							else {
-								attributes.splice(sIdx+1, 0, t.jsxAttribute(t.jsxIdentifier('class'),
+								attributes.splice(sIdx+1, 0, t.jsxAttribute(t.jsxIdentifier(CLASS_ATTR),
 									t.jsxExpressionContainer(css)))
 							}
 
 							// add const css = useFela() if needed
-							const compDeclaration = findComponentDeclaration(path)
+							const [compDeclaration, compDeclFunction] = findComponentDeclaration(path)
 							if (compDeclaration) {
-								if (t.isFunctionExpression(compDeclaration.node.init) &&
-									t.isBlockStatement(compDeclaration.node.init.body)) {
-									const body = compDeclaration.node.init.body.body
+								if (t.isFunctionExpression(compDeclFunction.node) &&
+									t.isBlockStatement(compDeclFunction.node.body)) {
+									const body = compDeclFunction.node.body.body
 									let needsUse = true;
 									for (let i = 0; i < Math.min(body.length, 3); i++) {
 										if (t.isVariableDeclaration(body[i]) &&
@@ -225,11 +261,27 @@ module.exports = ({ types: t }) => {
 						}
 						else {
 							const selfClosing = children.length === 0
-							const openingElement = t.jsxOpeningElement(t.jsxIdentifier(element), attributes, selfClosing)
-							const closingElement = selfClosing ? null : t.jsxClosingElement(t.jsxIdentifier(element))
+							let tag = null
+							if (element.includes('.')) {
+								const [e0, e1] = element.split('.')
+								tag = t.jsxMemberExpression(t.jsxIdentifier(e0), t.jsxIdentifier(e1))
+							} else {
+								tag = t.jsxIdentifier(element)
+							}
+							const openingElement = t.jsxOpeningElement(tag, attributes, selfClosing)
+							const closingElement = selfClosing ? null : t.jsxClosingElement(tag)
 							path.replaceWith(t.jsxElement(openingElement, closingElement, jsxChildren))
 						}
 
+					}
+				},
+			},
+			ExportNamedDeclaration: {
+				exit(path, state) {
+					// Fixes problem of export var time = () -> 1   .... time = 2 changes the export
+					if (t.isVariableDeclaration(path.node.declaration) && path.node.declaration.kind == 'var') {
+						const newDeclaration = t.variableDeclaration('const', path.node.declaration.declarations)
+						path.replaceWith(t.exportNamedDeclaration(newDeclaration, path.node.specifiers, path.node.source))
 					}
 				},
 			}
