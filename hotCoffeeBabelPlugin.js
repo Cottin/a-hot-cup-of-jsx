@@ -37,15 +37,16 @@ module.exports = ({ types: t }) => {
 						const rightIsFunc = t.isFunctionExpression(expression.right) // App = function()
 						const rightIsWrappedFunc = t.isCallExpression(expression.right) && // App = memo(function() ...)
 																				t.isFunctionExpression(expression.right.arguments[0])
-					 	
-					 	if (rightIsFunc || rightIsWrappedFunc) {
+						
+						if (rightIsFunc || rightIsWrappedFunc) {
 							path.replaceWith(t.variableDeclaration('var', [
 								t.variableDeclarator(expression.left, expression.right)
 							]))
-					 	}
+						}
 					}
 				}
 			},
+
 
 			// export default App = function() { ...   ->  	var App = function() { ...
 			// 																							export default App;jk

@@ -35,5 +35,5 @@ export default MyComp;`,
 });
 export default MyComp;`,
     },
-  ]
+  ],
 });
