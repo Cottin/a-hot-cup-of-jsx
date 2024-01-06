@@ -6,6 +6,11 @@ import underscoreToJSXBabelPlugin from './underscoreToJSXBabelPlugin';
 // will complete *at the point the pluginTester function is called* which means
 // BEFORE beforeAll and other Jest hooks are run.
 
+
+// NOTE: if you get ReferenceError: css is not defined 
+// make sure you are using an s prop for one element in your component.
+// eg. if you have renderProps that uses s: ... but your direct child is not using it, you will have a problem.
+
 pluginTester({
   plugin: underscoreToJSXBabelPlugin,
   tests: [
